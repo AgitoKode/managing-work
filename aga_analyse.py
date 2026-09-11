@@ -15,6 +15,7 @@ from __future__ import annotations
 import datetime as dt
 import sys
 import traceback
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -53,6 +54,32 @@ FORELOPIG_BEREGNING_BANNER = (
 
 class KritiskFeil(Exception):
     pass
+
+
+@dataclass
+class KjoeringResultat:
+    """Alt én kjøring av kjoer_analyse() produserer, pluss nøkkeltallene som
+    trengs for et tydelig sammendrag - se main() for konsollutskriften."""
+
+    hovedrapport: Path
+    felles_arbeidsbok: Path
+    steg4_9_filer: list[Path] = field(default_factory=list)
+    oppslagsbehov: Path | None = None
+    antall_rader_analysert: int = 0
+    antall_ansatte: int = 0
+    antall_prosjekter: int = 0
+    kommuner: list[str] = field(default_factory=list)
+    soner: list[str] = field(default_factory=list)
+    samlet_lonn: float = 0.0
+    antall_avvikskategorier: int = 0
+    prosjekter_som_krever_kontroll: int = 0
+    kilde_tilgjengelig: bool = True
+
+    def alle_filer(self) -> list[Path]:
+        filer = [self.hovedrapport, self.felles_arbeidsbok, *self.steg4_9_filer]
+        if self.oppslagsbehov is not None:
+            filer.append(self.oppslagsbehov)
+        return filer
 
 
 def _les_kilde_dataframe(prosjektmappe: Path, konfig) -> tuple[pd.DataFrame, dict, Path, str]:
@@ -409,7 +436,7 @@ def beregn_grunnlag(prosjektmappe: Path) -> dict:
     }
 
 
-def kjoer_analyse(prosjektmappe: Path) -> Path:
+def kjoer_analyse(prosjektmappe: Path) -> KjoeringResultat:
     grunnlag = beregn_grunnlag(prosjektmappe)
     konfig = grunnlag["konfig"]
     logger = grunnlag["logger"]
@@ -432,6 +459,7 @@ def kjoer_analyse(prosjektmappe: Path) -> Path:
     nettverksprobe = grunnlag["nettverksprobe"]
     antall_ekskludert_andre_aar = grunnlag["antall_ekskludert_andre_aar"]
 
+    oppslagsbehov_sti = None
     if not kilde_tilgjengelig:
         oppslagsbehov_df = bygg_oppslagsbehov(prosjektregister, analyseaar)
         oppslagsbehov_sti = konfig.sti("output_mappe") / "AGA_oppslagsbehov.xlsx"
@@ -486,7 +514,39 @@ def kjoer_analyse(prosjektmappe: Path) -> Path:
     for f in leveranser:
         logger.info("STEG 4-9-leveranse skrevet: %s", f)
 
-    return output_sti
+    # --- Felles arbeidsbok: alle ni steg samlet i én fil, samme kjøring/prosess ---
+    from aga_lib.felles_arbeidsbok import bygg_felles_arbeidsbok
+
+    felles_sti = bygg_felles_arbeidsbok(prosjektmappe, grunnlag=grunnlag)
+    logger.info("Felles arbeidsbok (alle steg) skrevet: %s", felles_sti)
+
+    unike_kommuner = sorted({
+        aga_per_prosjektnoekkel[(p.noekkeltype, p.noekkelverdi)].kommune
+        for p in prosjektregister if aga_per_prosjektnoekkel[(p.noekkeltype, p.noekkelverdi)].kommune
+    })
+    unike_soner = sorted({
+        aga_per_prosjektnoekkel[(p.noekkeltype, p.noekkelverdi)].sone
+        for p in prosjektregister if aga_per_prosjektnoekkel[(p.noekkeltype, p.noekkelverdi)].sone
+    })
+    prosjekter_krever_kontroll = sum(
+        1 for p in prosjektregister if p.kommune_resultat.kontrollstatus != "KOMMUNE_VERIFISERT"
+    )
+
+    return KjoeringResultat(
+        hovedrapport=output_sti,
+        felles_arbeidsbok=felles_sti,
+        steg4_9_filer=leveranser,
+        oppslagsbehov=oppslagsbehov_sti,
+        antall_rader_analysert=len(df),
+        antall_ansatte=int(df["ansattnr"].nunique()),
+        antall_prosjekter=len(prosjektregister),
+        kommuner=unike_kommuner,
+        soner=unike_soner,
+        samlet_lonn=float(pd.to_numeric(df.get("total_lonn"), errors="coerce").fillna(0).sum()),
+        antall_avvikskategorier=len(avvik),
+        prosjekter_som_krever_kontroll=prosjekter_krever_kontroll,
+        kilde_tilgjengelig=kilde_tilgjengelig,
+    )
 
 
 def _skriv_rapport(
@@ -728,16 +788,44 @@ def _skriv_rapport(
     report.skriv_lederoppsummering(wb, "Kjøremetadata", kjoremetadata_linjer)
 
 
+def _skriv_tydelig_sammendrag(resultat: KjoeringResultat) -> None:
+    """Ett tydelig, lettlest sammendrag i konsollet - én kjøring, ett sted å se
+    hva som ble produsert og hva de viktigste tallene er, uten å måtte åpne
+    Excel-filene først."""
+    linje = "=" * 78
+    print(f"\n{linje}")
+    print("AGA-ANALYSEN ER FULLFØRT - TYDELIGE RESULTATER")
+    print(linje)
+    print(f"Rader analysert:            {resultat.antall_rader_analysert}")
+    print(f"Unike ansatte:               {resultat.antall_ansatte}")
+    print(f"Unike prosjekter:            {resultat.antall_prosjekter}")
+    print(f"Samlet lønnsgrunnlag:        {resultat.samlet_lonn:,.2f} kr".replace(",", " ").replace(".", ","))
+    print(f"Identifiserte kommuner ({len(resultat.kommuner)}): {', '.join(resultat.kommuner) or '(ingen)'}")
+    print(f"Identifiserte AGA-soner ({len(resultat.soner)}): {', '.join(resultat.soner) or '(ingen)'}")
+    print(f"Prosjekter som krever manuell kontroll: {resultat.prosjekter_som_krever_kontroll}")
+    print(f"Avvikskategorier registrert:            {resultat.antall_avvikskategorier}")
+    if not resultat.kilde_tilgjengelig:
+        print("MERK: Offisiell AGA-kilde manglet - AGA-sone er IKKE fylt ut noe sted (se AGA_oppslagsbehov.xlsx).")
+    print(
+        "\nIngen AGA-sone i disse filene er endelig juridisk bekreftet - se ark "
+        "'Regelverksgrunnlag'/'STEG9 - Ledelsesrapport'."
+    )
+    print(f"\n{linje}")
+    print("FILER PRODUSERT I DENNE KJØRINGEN:")
+    print(linje)
+    print(f"  Hovedrapport (15 ark):        {resultat.hovedrapport.resolve()}")
+    print(f"  Felles arbeidsbok (STEG1-9):  {resultat.felles_arbeidsbok.resolve()}")
+    for f in resultat.steg4_9_filer:
+        print(f"  STEG4-9-leveranse:            {f.resolve()}")
+    if resultat.oppslagsbehov is not None:
+        print(f"  Oppslagsbehov (mangler kilde): {resultat.oppslagsbehov.resolve()}")
+    print(linje + "\n")
+
+
 def main() -> int:
     prosjektmappe = Path.cwd()
-    kun_felles_arbeidsbok = "--felles-arbeidsbok" in sys.argv[1:]
     try:
-        if kun_felles_arbeidsbok:
-            from aga_lib.felles_arbeidsbok import bygg_felles_arbeidsbok
-
-            output_sti = bygg_felles_arbeidsbok(prosjektmappe)
-        else:
-            output_sti = kjoer_analyse(prosjektmappe)
+        resultat = kjoer_analyse(prosjektmappe)
     except KildefilIkkeFunnet as e:
         print(f"\nFEIL: {e}\n", file=sys.stderr)
         return 2
@@ -749,8 +837,7 @@ def main() -> int:
         traceback.print_exc()
         return 1
 
-    print("\nAGA-analysen er fullført.")
-    print(f"Resultatfil: {output_sti.resolve()}\n")
+    _skriv_tydelig_sammendrag(resultat)
     return 0
 
 

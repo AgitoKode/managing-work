@@ -96,17 +96,17 @@ if ($AnalyseExitKode -ne 0) {
     exit $AnalyseExitKode
 }
 
-# 6) Vis hvor resultatfilen ble lagret
+# 6) Pek på filen de fleste vil åpne først (Python-utskriften over viser ALLE filene)
 $OutputMappe = Join-Path $Prosjektmappe "output"
-$SisteRapport = Get-ChildItem -Path $OutputMappe -Filter "AGA_Rapport_*.xlsx" -ErrorAction SilentlyContinue |
+$FellesArbeidsbok = Get-ChildItem -Path $OutputMappe -Filter "AGA-analyse-*-alle-steg.xlsx" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 Write-Host ""
 Write-Host "=== Fullført ===" -ForegroundColor Green
-if ($SisteRapport) {
-    Write-Host "Resultatfil: $($SisteRapport.FullName)"
+if ($FellesArbeidsbok) {
+    Write-Host "Start her - felles arbeidsbok med alle steg: $($FellesArbeidsbok.FullName)"
 } else {
-    Write-Host "Analysen kjørte, men fant ingen AGA_Rapport_*.xlsx i $OutputMappe - se skjermutskriften over."
+    Write-Host "Analysen kjørte, men fant ingen AGA-analyse-*-alle-steg.xlsx i $OutputMappe - se skjermutskriften over."
 }
 
 $Oppslagsbehov = Join-Path $OutputMappe "AGA_oppslagsbehov.xlsx"

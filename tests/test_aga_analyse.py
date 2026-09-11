@@ -224,19 +224,27 @@ class TestRapportstruktur(unittest.TestCase):
         output_mappe = PROSJEKTMAPPE / "output"
         filer_foer = set(output_mappe.glob("*")) if output_mappe.exists() else set()
 
-        output_sti = aga_analyse.kjoer_analyse(PROSJEKTMAPPE)
+        resultat = aga_analyse.kjoer_analyse(PROSJEKTMAPPE)
 
         hash_etter = hashlib.sha256(kildefil_sti.read_bytes()).hexdigest()
         self.assertEqual(hash_foer, hash_etter, "Kildefilen ble endret av analysen")
 
         import openpyxl
 
-        wb = openpyxl.load_workbook(output_sti)
+        wb = openpyxl.load_workbook(resultat.hovedrapport)
         for arknavn in OBLIGATORISKE_ARK:
             self.assertIn(arknavn, wb.sheetnames, f"Mangler obligatorisk ark: {arknavn}")
 
+        wb_felles = openpyxl.load_workbook(resultat.felles_arbeidsbok)
+        for prefiks in ("STEG1", "STEG2", "STEG3", "STEG4", "STEG5", "STEG6", "STEG7", "STEG8", "STEG9"):
+            self.assertTrue(
+                any(navn.startswith(prefiks) for navn in wb_felles.sheetnames),
+                f"Mangler et ark for {prefiks} i den felles arbeidsboken",
+            )
+        self.assertEqual(len(resultat.steg4_9_filer), 6)
+
         # Ryddighet: fjern ALLE filer denne testkjøringen selv opprettet i .\output,
-        # inkludert STEG4-9-leveransene (Prosjektregister.xlsx m.fl.), men aldri
+        # inkludert STEG4-9-leveransene og den felles arbeidsboken, men aldri
         # filer som lå der fra før testen startet.
         for f in set(output_mappe.glob("*")) - filer_foer:
             f.unlink()

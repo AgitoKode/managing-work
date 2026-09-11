@@ -79,18 +79,23 @@ eller bokstavene æ/ø/å.
 
 ## Resultatfiler
 
-En vanlig kjøring (`python aga_analyse.py`) produserer, i `.\output`:
+Kildefilen leses og analyseres KUN ÉN gang per kjøring (`python aga_analyse.py`
+eller `.\run_aga_analyse.ps1`) - denne ene prosessen produserer alt på én gang,
+i `.\output`:
 
-- `AGA_Rapport_2026.xlsx` - den samlede rapporten med 15 ark (se under).
-- Seks frittstående STEG4-9-leveranser (samme datagrunnlag, andre kolonneoppsett):
+- **`AGA-analyse-<år>-alle-steg.xlsx`** - start her. Én arbeidsbok med alle ni
+  steg samlet (12 ark: STEG1-9 pluss et metode-/forbeholdsark).
+- `AGA_Rapport_2026.xlsx` - den mer omfattende rapporten med 15 ark (se under).
+- Seks frittstående STEG4-9-leveranser (samme tall, andre kolonneoppsett):
   `Prosjektregister.xlsx`, `AGA-detaljrapport.xlsx`, `AGA-oppsummering.xlsx`,
   `Kilderegister.xlsx`, `Avviksrapport.xlsx`, `Lederoppsummering.md`.
 - `AGA_oppslagsbehov.xlsx` - kun dersom offisiell AGA-kilde mangler helt (se under).
 
-Kjør i stedet `python aga_analyse.py --felles-arbeidsbok` for å få ALLE ni steg
-samlet i én arbeidsbok, `AGA-analyse-<år>-alle-steg.xlsx` (12 ark: STEG1-9 pluss
-et metode-/forbeholdsark). Samme underliggende tall som de øvrige leveransene -
-kun sammenstillingen er annerledes.
+Alle filene bygger på nøyaktig samme beregning (`aga_analyse.beregn_grunnlag()`),
+så tallene er identiske uansett hvilken fil du åpner. Etter kjøring skrives et
+tydelig sammendrag til skjermen/loggen: antall rader, ansatte, prosjekter,
+kommuner, AGA-soner, samlet lønnsgrunnlag, antall avvik, og en full liste over
+alle filene som ble produsert.
 
 Ingen av disse overskrives stille - finnes filen fra før, lagres den nye med et
 tidsstempel i filnavnet i stedet.

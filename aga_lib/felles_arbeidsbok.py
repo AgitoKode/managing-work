@@ -192,12 +192,17 @@ def _bygg_steg7(df: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
     ]
 
 
-def bygg_felles_arbeidsbok(prosjektmappe: Path) -> Path:
-    """Kjører hele analysen (via aga_analyse.beregn_grunnlag) og samler STEG 1-9
-    i én arbeidsbok: .\\output\\AGA-analyse-<år>-alle-steg.xlsx."""
+def bygg_felles_arbeidsbok(prosjektmappe: Path, grunnlag: dict | None = None) -> Path:
+    """Samler STEG 1-9 i én arbeidsbok: .\\output\\AGA-analyse-<år>-alle-steg.xlsx.
+
+    Tar imot et allerede beregnet `grunnlag` (fra aga_analyse.beregn_grunnlag())
+    når denne kalles som del av den samlede kjøringen i kjoer_analyse(), slik at
+    kildefilen kun leses og analyseres ÉN gang per prosess. Kalles denne
+    frittstående (grunnlag=None), beregnes grunnlaget her på vanlig måte."""
     import aga_analyse  # lokal import for å unngå sirkulær import ved modulnivå
 
-    grunnlag = aga_analyse.beregn_grunnlag(prosjektmappe)
+    if grunnlag is None:
+        grunnlag = aga_analyse.beregn_grunnlag(prosjektmappe)
     konfig = grunnlag["konfig"]
     logger = grunnlag["logger"]
     df = grunnlag["df"]

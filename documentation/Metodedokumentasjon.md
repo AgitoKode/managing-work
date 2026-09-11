@@ -163,18 +163,32 @@ to parallelle lønnsartikler). Berørte rader flagges i den nye kolonnen
 `arbeidstid_fallback_brukt` og telles i Datakvalitet-arket - i denne kjøringen
 gjaldt det 83 vakter.
 
-## 9b. STEG 4-9 - seks frittstående leveransefiler
+## 9b. Én prosess, alle leveranser
 
-I tillegg til `AGA_Rapport_2026.xlsx` skriver programmet seks separate filer
-(samme underliggende beregning, forenklet kolonneoppsett per oppdragets
-STEG 4-9): `Prosjektregister.xlsx`, `AGA-detaljrapport.xlsx`,
-`AGA-oppsummering.xlsx`, `Kilderegister.xlsx`, `Avviksrapport.xlsx` og
-`Lederoppsummering.md`. Se `aga_lib/leveranser_steg4_9.py`. Disse gjenbruker
-samme prosjektregister/AGA-klassifisering som hovedrapporten - ingen ny
-innlesing eller nye nettverksoppslag gjøres. Dersom offisiell AGA-kilde
-mangler helt (jf. det kritiske kravet i STEG 4/9), skrives `Kilderegister.xlsx`
-TOMT (kun kolonneoverskrifter) og AGA-sone/-status settes til
-"MANGLER OFFISIELT KILDEGRUNNLAG" i de andre filene, uten å gjette.
+`aga_analyse.kjoer_analyse()` leser og analyserer kildefilen KUN ÉN gang per
+kjøring (`aga_analyse.beregn_grunnlag()`), og skriver deretter ALLE
+resultatfilene fra det samme, delte grunnlaget - ingen fil krever et eget
+programkall eller leser filen på nytt:
+
+1. `AGA_Rapport_<år>.xlsx` - hovedrapporten med 15 ark.
+2. Seks separate STEG4-9-filer (forenklet kolonneoppsett per oppdragets
+   STEG 4-9): `Prosjektregister.xlsx`, `AGA-detaljrapport.xlsx`,
+   `AGA-oppsummering.xlsx`, `Kilderegister.xlsx`, `Avviksrapport.xlsx` og
+   `Lederoppsummering.md`. Se `aga_lib/leveranser_steg4_9.py`
+   (`bygg_leveranse_data()` bygger dataene rent, `bygg_og_skriv_leveranser()`
+   skriver dem til fil).
+3. `AGA-analyse-<år>-alle-steg.xlsx` - alle ni steg samlet i én arbeidsbok
+   (12 ark), se `aga_lib/felles_arbeidsbok.py`.
+
+Dersom offisiell AGA-kilde mangler helt (jf. det kritiske kravet i STEG 4/9),
+skrives `Kilderegister.xlsx`/STEG5-arket TOMT (kun kolonneoverskrifter) og
+AGA-sone/-status settes til "MANGLER OFFISIELT KILDEGRUNNLAG" i de andre
+filene, uten å gjette - se `AGA_oppslagsbehov.xlsx`.
+
+Etter kjøringen skrives et tydelig sammendrag til konsoll/logg
+(`aga_analyse._skriv_tydelig_sammendrag()`): nøkkeltall og en full liste over
+alle filene som ble produsert, slik at man ikke trenger å åpne Excel for å se
+hva analysen fant.
 
 ## 10. Konstruert vakt-ID
 
