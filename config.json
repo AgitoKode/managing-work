@@ -1,0 +1,58 @@
+{
+  "versjon": "1.0.0",
+  "analyseaar": 2026,
+  "termin_maaneder": {
+    "1": [1, 2],
+    "2": [3, 4],
+    "3": [5, 6],
+    "4": [7, 8],
+    "5": [9, 10],
+    "6": [11, 12]
+  },
+  "sammenligningssats_prosent": 14.1,
+  "kildefil_sok": {
+    "sok_mapper": ["input", "."],
+    "krev_alle_tekster_i_navn": ["ført arbeid", "utvidet"],
+    "ekskluder_tekster_i_navn": [
+      "aga_rapport",
+      "prosjektregister",
+      "avviksrapport",
+      "kilderegister",
+      "kontrollrapport",
+      "aga_oppslagsbehov"
+    ],
+    "tillatte_filendelser": [".xlsx", ".xlsm"]
+  },
+  "offisielle_kildedomener": [
+    "skatteetaten.no",
+    "lovdata.no",
+    "regjeringen.no",
+    "ssb.no",
+    "kartverket.no"
+  ],
+  "nettverk_probe_timeout_sekunder": 5,
+  "linjeklassifisering": {
+    "_kommentar": "Styrer hvilke Artikkel-/Artikkeltype-verdier som regnes som fysisk arbeidstid (A), tillegg (B) eller korreksjon/etterbetaling (C). Ukjente verdier flagges i Datakvalitet i stedet for å bli gjettet.",
+    "arbeidstid_artikler": ["Arbeidstimer", "Arbeidstimer aften", "Arbeidstimer natt"],
+    "korreksjon_artikler": ["Etterbetaling av vakter", "Fratrekk vakt", "Diverse trekk"],
+    "korreksjon_artikkeltyper": ["Fratrekk"],
+    "kjente_tillegg_artikler": [
+      "Nattillegg", "Kveldstillegg", "Helg", "Overtid 100%", "Overtid 50%",
+      "Aftentillegg", "Forskjøvet vakt", "Helligdag", "Helligdag 133,33%", "Reisekostnader"
+    ],
+    "fallback_arbeidstid_artikler": ["Helligdag 133,33%", "Helligdag", "Helg"],
+    "_fallback_kommentar": "På helg-/helligdagsvakter registrerer RecMan noen ganger IKKE en egen 'Arbeidstimer'-rad - hele vaktens timer ligger da på en av artiklene over i stedet (bekreftet ved manuell gjennomgang: Timer/Timer ekskl. pause har reelle verdier på disse radene når Arbeidstimer mangler for samme ansatt/dato/jobbnr/prosjektnr). Uten denne regelen ville disse vaktenes arbeidstid feilaktig blitt talt som 0."
+  },
+  "stier": {
+    "input_mappe": "input",
+    "output_mappe": "output",
+    "cache_mappe": "cache",
+    "logg_mappe": "logs",
+    "kildearkiv_mappe": "source_archive",
+    "dokumentasjon_mappe": "documentation"
+  },
+  "kildearkiv_filer": {
+    "kommunekatalog_csv": "skatteetaten_kommunekatalog_2026.csv",
+    "satser_kilde_tekst": "skatteetaten_satser_2026_brukeroppgitt.txt"
+  }
+}
