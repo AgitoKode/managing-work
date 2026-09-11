@@ -59,8 +59,7 @@ def _skriv_enkelt_ark(sti: Path, arknavn: str, df: pd.DataFrame, status_kolonner
     report.lagre(wb, sti)
 
 
-def bygg_og_skriv_leveranser(
-    output_mappe: Path,
+def bygg_leveranse_data(
     df: pd.DataFrame,
     prosjektregister: list,
     aga_per_prosjektnoekkel: dict,
@@ -72,12 +71,16 @@ def bygg_og_skriv_leveranser(
     kontrolltidspunkt: str,
     analyseaar: int,
     logger,
-) -> list[Path]:
-    filer: list[Path] = []
+) -> dict:
+    """Ren databygging for STEG 4-9 (ingen filskriving) - brukes både av
+    bygg_og_skriv_leveranser() (seks separate filer) og
+    aga_lib.felles_arbeidsbok (én samlet arbeidsbok for alle steg), slik at
+    tallene alltid er identiske uansett hvilken leveranseform som velges.
 
+    Returnerer {"prosjektregister": df, "detaljrapport": df, "oppsummering": df,
+    "kilderegister": df, "avviksrapport": df, "lederoppsummering_md": str}."""
     # ---------------------------------------------------------------
-    # 1) Prosjektregister.xlsx
-    # ---------------------------------------------------------------
+    # 1) Prosjektregister
     rader1 = []
     for p in prosjektregister:
         klass = aga_per_prosjektnoekkel[(p.noekkeltype, p.noekkelverdi)]
@@ -87,12 +90,10 @@ def bygg_og_skriv_leveranser(
             "Kommune": klass.kommune or "",
             "AGA-sone": klass.sone or "",
         })
-    sti1 = _unik_sti(output_mappe / "Prosjektregister.xlsx")
-    _skriv_enkelt_ark(sti1, "Prosjektregister", pd.DataFrame(rader1))
-    filer.append(sti1)
+    prosjektregister_df = pd.DataFrame(rader1)
 
     # ---------------------------------------------------------------
-    # 2) AGA-detaljrapport.xlsx (én rad per registrering/arbeidspost)
+    # 2) AGA-detaljrapport (én rad per registrering/arbeidspost)
     # ---------------------------------------------------------------
     noekler = df.apply(_prosjektnoekkel_for_rad, axis=1)
     detalj = pd.DataFrame({
@@ -103,12 +104,9 @@ def bygg_og_skriv_leveranser(
         "Timer": df.get("arbeidstimer"),
         "Total lønn": df.get("total_lonn"),
     })
-    sti2 = _unik_sti(output_mappe / "AGA-detaljrapport.xlsx")
-    _skriv_enkelt_ark(sti2, "AGA-detaljrapport", detalj)
-    filer.append(sti2)
 
     # ---------------------------------------------------------------
-    # 3) AGA-oppsummering.xlsx (per AGA-sone og kommune)
+    # 3) AGA-oppsummering (per AGA-sone og kommune)
     # ---------------------------------------------------------------
     oppsummering_grunnlag = detalj.copy()
     oppsummering_grunnlag["AGA-sone"] = oppsummering_grunnlag["AGA-sone"].replace("", "(ikke fastslått)")
@@ -118,12 +116,9 @@ def bygg_og_skriv_leveranser(
         .agg(Timer=("Timer", "sum"), **{"Total lønn": ("Total lønn", "sum")})
         .reset_index()
     )
-    sti3 = _unik_sti(output_mappe / "AGA-oppsummering.xlsx")
-    _skriv_enkelt_ark(sti3, "AGA-oppsummering", agg3)
-    filer.append(sti3)
 
     # ---------------------------------------------------------------
-    # 4) Kilderegister.xlsx (én rad per kommune -> sone -> kilde)
+    # 4) Kilderegister (én rad per kommune -> sone -> kilde)
     # ---------------------------------------------------------------
     if not kilde_tilgjengelig:
         logger.warning(
@@ -157,12 +152,9 @@ def bygg_og_skriv_leveranser(
                 "Status": status,
             })
         kilde4_df = pd.DataFrame(rader4)
-    sti4 = _unik_sti(output_mappe / "Kilderegister.xlsx")
-    _skriv_enkelt_ark(sti4, "Kilderegister", kilde4_df, status_kolonner=["Status"] if len(kilde4_df) else None)
-    filer.append(sti4)
 
     # ---------------------------------------------------------------
-    # 5) Avviksrapport.xlsx (seksjon 8-kategoriene, eksplisitt)
+    # 5) Avviksrapport (seksjon 8-kategoriene, eksplisitt)
     # ---------------------------------------------------------------
     def _prosjekter_der(vilkaar) -> str:
         treff = [
@@ -210,12 +202,9 @@ def bygg_og_skriv_leveranser(
             ),
         },
     ]
-    sti5 = _unik_sti(output_mappe / "Avviksrapport.xlsx")
-    _skriv_enkelt_ark(sti5, "Avviksrapport", pd.DataFrame(avvik5))
-    filer.append(sti5)
 
     # ---------------------------------------------------------------
-    # 6) Lederoppsummering.md
+    # 6) Lederoppsummering.md (tekst)
     # ---------------------------------------------------------------
     samlet_lonn = pd.to_numeric(df.get("total_lonn"), errors="coerce").fillna(0).sum()
     antall_prosjekter = len(prosjektregister)
@@ -262,10 +251,77 @@ def bygg_og_skriv_leveranser(
   bemanningsforetak som leier ut arbeidskraft. Se Regelverksgrunnlag i AGA_Rapport-arbeidsboken.
 - Skatteetaten.no, lovdata.no og regjeringen.no var ikke nåbare fra dette kjøremiljøet ved kjøretidspunktet
   ({kontrolltidspunkt}) - kildene i Kilderegister.xlsx er derfor ikke selv åpnet og lest i denne kjøringen.
-- {"Kommunekatalog/satstabell manglet helt lokalt - AGA-sone er IKKE fylt ut noe sted i denne leveransen." if not kilde_tilgjengelig else "Se Avviksrapport.xlsx for prosjekter med manglende/motstridende kommune- eller sonegrunnlag."}
+- {"Kommunekatalog/satstabell manglet helt lokalt - AGA-sone er IKKE fylt ut noe sted i denne leveransen." if not kilde_tilgjengelig else "Se Avviksrapport for prosjekter med manglende/motstridende kommune- eller sonegrunnlag."}
 """
+
+    return {
+        "prosjektregister": prosjektregister_df,
+        "detaljrapport": detalj,
+        "oppsummering": agg3,
+        "kilderegister": kilde4_df,
+        "avviksrapport": pd.DataFrame(avvik5),
+        "lederoppsummering_md": md,
+    }
+
+
+def bygg_og_skriv_leveranser(
+    output_mappe: Path,
+    df: pd.DataFrame,
+    prosjektregister: list,
+    aga_per_prosjektnoekkel: dict,
+    kilde_id_geografi: str,
+    kilde_tilgjengelig: bool,
+    kk_url: str,
+    kk_tittel: str,
+    kk_utgiver: str,
+    kontrolltidspunkt: str,
+    analyseaar: int,
+    logger,
+) -> list[Path]:
+    """Bygger STEG4-9-dataene (bygg_leveranse_data) og skriver dem til seks
+    separate filer i .\\output. Overskriver aldri en tidligere leveranse
+    stille - se _unik_sti()."""
+    data = bygg_leveranse_data(
+        df=df,
+        prosjektregister=prosjektregister,
+        aga_per_prosjektnoekkel=aga_per_prosjektnoekkel,
+        kilde_id_geografi=kilde_id_geografi,
+        kilde_tilgjengelig=kilde_tilgjengelig,
+        kk_url=kk_url,
+        kk_tittel=kk_tittel,
+        kk_utgiver=kk_utgiver,
+        kontrolltidspunkt=kontrolltidspunkt,
+        analyseaar=analyseaar,
+        logger=logger,
+    )
+
+    filer: list[Path] = []
+
+    sti1 = _unik_sti(output_mappe / "Prosjektregister.xlsx")
+    _skriv_enkelt_ark(sti1, "Prosjektregister", data["prosjektregister"])
+    filer.append(sti1)
+
+    sti2 = _unik_sti(output_mappe / "AGA-detaljrapport.xlsx")
+    _skriv_enkelt_ark(sti2, "AGA-detaljrapport", data["detaljrapport"])
+    filer.append(sti2)
+
+    sti3 = _unik_sti(output_mappe / "AGA-oppsummering.xlsx")
+    _skriv_enkelt_ark(sti3, "AGA-oppsummering", data["oppsummering"])
+    filer.append(sti3)
+
+    sti4 = _unik_sti(output_mappe / "Kilderegister.xlsx")
+    _skriv_enkelt_ark(
+        sti4, "Kilderegister", data["kilderegister"],
+        status_kolonner=["Status"] if len(data["kilderegister"]) else None,
+    )
+    filer.append(sti4)
+
+    sti5 = _unik_sti(output_mappe / "Avviksrapport.xlsx")
+    _skriv_enkelt_ark(sti5, "Avviksrapport", data["avviksrapport"])
+    filer.append(sti5)
+
     sti6 = _unik_sti(output_mappe / "Lederoppsummering.md")
-    sti6.write_text(md, encoding="utf-8")
+    sti6.write_text(data["lederoppsummering_md"], encoding="utf-8")
     filer.append(sti6)
 
     return filer

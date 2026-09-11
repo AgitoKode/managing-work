@@ -88,7 +88,13 @@ def _les_kilde_dataframe(prosjektmappe: Path, konfig) -> tuple[pd.DataFrame, dic
     return df, {"mapping": mapping, "arknavn": hoved_arknavn, "alle_ark": ark}, kildefil_resultat.sti, sha256
 
 
-def kjoer_analyse(prosjektmappe: Path) -> Path:
+def beregn_grunnlag(prosjektmappe: Path) -> dict:
+    """Leser kildefilen og gjør ALLE beregninger (STEG 1-9-grunnlaget): kolonnemapping,
+    datorensing, linjeklassifisering, prosjektregister, kommune-/AGA-klassifisering,
+    kontroller og aggregeringer. Gjør INGEN filskriving - det er ansvaret til
+    kjoer_analyse() (AGA_Rapport + STEG4-9-filene) og aga_lib.felles_arbeidsbok
+    (én samlet arbeidsbok for alle steg). All logikk finnes kun ETT sted her,
+    slik at de ulike leveranseformene alltid viser de samme tallene."""
     konfig = last_konfigurasjon(prosjektmappe)
     kjoretidspunkt = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     logger = sett_opp_logging(konfig.sti("logg_mappe"), kjoretidspunkt)
@@ -371,6 +377,60 @@ def kjoer_analyse(prosjektmappe: Path) -> Path:
         programversjon=PROGRAMVERSJON,
         pakkeversjoner=hent_pakkeversjoner(),
     )
+
+    return {
+        "konfig": konfig,
+        "logger": logger,
+        "df": df,
+        "lesekontekst": lesekontekst,
+        "kildefil_sti": kildefil_sti,
+        "kildefil_sha256": kildefil_sha256,
+        "analyseaar": analyseaar,
+        "antall_ekskludert_andre_aar": antall_ekskludert_andre_aar,
+        "prosjektregister": prosjektregister,
+        "kommuneoppslag": kommuneoppslag,
+        "sonekatalog": sonekatalog,
+        "kilde_id_geografi": kilde_id_geografi,
+        "kilde_tilgjengelig": kilde_tilgjengelig,
+        "aga_per_prosjektnoekkel": aga_per_prosjektnoekkel,
+        "avvik": avvik,
+        "datakvalitet": datakvalitet,
+        "agg_termin": agg_termin,
+        "agg_kommune": agg_kommune,
+        "agg_prosjekt": agg_prosjekt,
+        "agg_ansatt": agg_ansatt,
+        "sammenligningssats": sammenligningssats,
+        "kilderader": kilderader,
+        "kontrolltidspunkt": kontrolltidspunkt,
+        "metadata": metadata,
+        "nettverksprobe": nettverksprobe,
+        "kk_sti": kk_sti,
+        "kildearkiv": kildearkiv,
+    }
+
+
+def kjoer_analyse(prosjektmappe: Path) -> Path:
+    grunnlag = beregn_grunnlag(prosjektmappe)
+    konfig = grunnlag["konfig"]
+    logger = grunnlag["logger"]
+    df = grunnlag["df"]
+    lesekontekst = grunnlag["lesekontekst"]
+    analyseaar = grunnlag["analyseaar"]
+    prosjektregister = grunnlag["prosjektregister"]
+    kilde_id_geografi = grunnlag["kilde_id_geografi"]
+    kilde_tilgjengelig = grunnlag["kilde_tilgjengelig"]
+    aga_per_prosjektnoekkel = grunnlag["aga_per_prosjektnoekkel"]
+    avvik = grunnlag["avvik"]
+    datakvalitet = grunnlag["datakvalitet"]
+    agg_termin = grunnlag["agg_termin"]
+    agg_kommune = grunnlag["agg_kommune"]
+    agg_prosjekt = grunnlag["agg_prosjekt"]
+    agg_ansatt = grunnlag["agg_ansatt"]
+    kilderader = grunnlag["kilderader"]
+    kontrolltidspunkt = grunnlag["kontrolltidspunkt"]
+    metadata = grunnlag["metadata"]
+    nettverksprobe = grunnlag["nettverksprobe"]
+    antall_ekskludert_andre_aar = grunnlag["antall_ekskludert_andre_aar"]
 
     if not kilde_tilgjengelig:
         oppslagsbehov_df = bygg_oppslagsbehov(prosjektregister, analyseaar)
@@ -670,8 +730,14 @@ def _skriv_rapport(
 
 def main() -> int:
     prosjektmappe = Path.cwd()
+    kun_felles_arbeidsbok = "--felles-arbeidsbok" in sys.argv[1:]
     try:
-        output_sti = kjoer_analyse(prosjektmappe)
+        if kun_felles_arbeidsbok:
+            from aga_lib.felles_arbeidsbok import bygg_felles_arbeidsbok
+
+            output_sti = bygg_felles_arbeidsbok(prosjektmappe)
+        else:
+            output_sti = kjoer_analyse(prosjektmappe)
     except KildefilIkkeFunnet as e:
         print(f"\nFEIL: {e}\n", file=sys.stderr)
         return 2
