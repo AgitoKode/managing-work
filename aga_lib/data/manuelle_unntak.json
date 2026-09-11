@@ -1,0 +1,11 @@
+{
+  "_beskrivelse": "Manuelt kuraterte unntak for arbeidssteder der verken postnummer eller et bokstavelig kommunenavn i Bedrift/Prosjekt/Jobb-feltet gjør automatisk gjenkjenning mulig. Hvert unntak er dokumentert med kilde og gir status KOMMUNE_SANNSYNLIG (ikke KOMMUNE_VERIFISERT), siden koblingen er utledet av institusjonskunnskap og ikke direkte av datafeltene. Denne listen skal holdes kort og eksplisitt - den skal ALDRI brukes som en generell fallback-gjetting.",
+  "bedrift_inneholder": {
+    "sonjatun sykestue": {
+      "kommunenummer": "5544",
+      "kommune": "Nordreisa",
+      "begrunnelse": "Sonjatun Sykestue / Distriktsmedisinsk senter Nord-Troms ligger på Storslett i Nordreisa kommune (offentlig kjent, jf. Nordreisa kommunes egne nettsider). Verken postnummer eller kommunenavn er oppgitt i datagrunnlaget for disse radene.",
+      "kilde": "Nordreisa kommune (nordreisa.kommune.no) - institusjonsplassering, ikke AGA-spesifikk kilde"
+    }
+  }
+}

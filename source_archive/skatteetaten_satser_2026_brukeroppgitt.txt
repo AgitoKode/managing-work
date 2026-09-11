@@ -1,0 +1,32 @@
+Kilde (brukeroppgitt utdrag, ikke selv hentet i denne økten pga. nettverksblokkering
+mot skatteetaten.no i kjøremiljøet):
+Tittel: "Satser for arbeidsgiveravgift - soneinndeling" (Skatteetaten)
+URL: https://www.skatteetaten.no/satser/arbeidsgiveravgift-soneinndeling/#kommunekatalog-2026
+Utgiver: Skatteetaten
+Gjeldende år: 2026
+Mottatt fra oppdragsgiver: 2026-09-11
+
+---
+
+Avgiften betales av lønn og annen avgiftspliktig godtgjørelse for arbeid og oppdrag i og utenfor tjenesteforhold.
+
+Avgiftssatsene fastsettes av Stortinget hvert år:
+
+Sone	Ordinære næringer	Landbruk og fiske
+I	14,1 %	14,1 %
+Ia*	14,1 %	10,6 %
+II	10,6 %	10,6 %
+III	6,4 %	6,4 %
+IV	5,1 %	5,1 %
+IVa	7,9 %	5,1 %
+V	0	0
+
+* I sone 1a skal det betales arbeidsgiveravgift med en sats på 10,6 prosent inntil
+differansen mellom:
+- det foretaket faktisk betaler i arbeidsgiveravgift
+- og det foretaket ville ha betalt i arbeidsgiveravgift med en sats på 14,1 prosent
+er lik fribeløpet.
+
+I 2026 er fribeløpet 850 000 kroner per foretak.
+
+For det overskytende avgiftsgrunnlaget brukes satsen på 14,1 prosent.

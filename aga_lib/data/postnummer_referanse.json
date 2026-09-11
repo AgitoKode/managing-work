@@ -1,0 +1,16 @@
+{
+  "_beskrivelse": "Kuratert postnummer -> kommune-referanse. Dette er IKKE et fullstendig nasjonalt postnummerregister - det dekker kun postnumrene som er observert i det aktuelle datagrunnlaget, og hvert oppslag er verifisert enkeltvis mot Bring/Posten sitt offentlige postnummerregister (via aggregatorene erikbolstad.no / adressesok.posten.no) i forbindelse med STEG 3-arbeidet 2026-09-11. Et postnummer som IKKE finnes i denne tabellen skal ALDRI gjettes - den skal håndteres av offentlig postnummerregister-oppslag (steg 5) eller manuell kontroll (steg 6), aldri fylles inn her uten ny verifisering.",
+  "oppslag": {
+    "0469": {"kommunenummer": "0301", "kommune": "Oslo", "poststed": "Oslo", "kilde": "Bring/Posten postnummerregister"},
+    "0319": {"kommunenummer": "0301", "kommune": "Oslo", "poststed": "Oslo", "kilde": "Bring/Posten postnummerregister"},
+    "0668": {"kommunenummer": "0301", "kommune": "Oslo", "poststed": "Oslo", "kilde": "Bring/Posten postnummerregister"},
+    "0440": {"kommunenummer": "0301", "kommune": "Oslo", "poststed": "Oslo", "kilde": "Bring/Posten postnummerregister"},
+    "5580": {"kommunenummer": "1160", "kommune": "Vindafjord", "poststed": "Ølen", "kilde": "Bring/Posten postnummerregister"},
+    "4201": {"kommunenummer": "1135", "kommune": "Sauda", "poststed": "Sauda", "kilde": "Bring/Posten postnummerregister"},
+    "9161": {"kommunenummer": "5546", "kommune": "Kvænangen", "poststed": "Burfjord", "kilde": "Bring/Posten postnummerregister"},
+    "3530": {"kommunenummer": "3310", "kommune": "Hole", "poststed": "Røyse", "kilde": "Bring/Posten postnummerregister"},
+    "5550": {"kommunenummer": "4612", "kommune": "Sveio", "poststed": "Sveio", "kilde": "Bring/Posten postnummerregister"},
+    "6800": {"kommunenummer": "4647", "kommune": "Sunnfjord", "poststed": "Førde", "kilde": "Bring/Posten postnummerregister", "delkommune_merknad": "Gamle Førde"},
+    "3041": {"kommunenummer": "3301", "kommune": "Drammen", "poststed": "Drammen", "kilde": "Bring/Posten postnummerregister"}
+  }
+}

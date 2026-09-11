@@ -1,0 +1,22 @@
+# Personopplysninger / lønnsdata - skal ALDRI i git
+*.xlsx
+*.xlsm
+
+# Virtuelt Python-miljø
+.venv/
+venv/
+
+# Genererte/lokale mapper (kan inneholde persondata fra RecMan-eksporten)
+/input/
+/output/
+/cache/
+/logs/
+
+# NB: /source_archive/ er IKKE ekskludert - den inneholder kun offentlige
+# Skatteetaten-kilder (kommunekatalog/satstabell), ingen persondata, og
+# committes bevisst slik at pipelinen fungerer direkte etter en git clone.
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
