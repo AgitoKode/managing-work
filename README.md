@@ -77,7 +77,18 @@ eller bokstavene æ/ø/å.
   arbeidstid, korreksjon eller kjent tillegg (se
   `documentation\Metodedokumentasjon.md` punkt 9).
 
-## Resultatfilen
+## Resultatfiler
+
+Hver kjøring produserer, i `.\output`:
+
+- `AGA_Rapport_2026.xlsx` - den samlede rapporten med 15 ark (se under).
+- Seks frittstående STEG4-9-leveranser (samme datagrunnlag, andre kolonneoppsett):
+  `Prosjektregister.xlsx`, `AGA-detaljrapport.xlsx`, `AGA-oppsummering.xlsx`,
+  `Kilderegister.xlsx`, `Avviksrapport.xlsx`, `Lederoppsummering.md`.
+- `AGA_oppslagsbehov.xlsx` - kun dersom offisiell AGA-kilde mangler helt (se under).
+
+Ingen av disse overskrives stille - finnes filen fra før, lagres den nye med et
+tidsstempel i filnavnet i stedet.
 
 `output\AGA_Rapport_2026.xlsx` inneholder 15 ark: Lederoppsummering,
 AGA_per_termin, AGA_per_kommune, AGA_per_prosjekt, AGA_per_ansatt,

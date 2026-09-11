@@ -22,7 +22,12 @@ sys.path.insert(0, str(PROSJEKTMAPPE))
 
 from aga_lib.postnummer import er_gyldig_postnummer, normaliser_postnummer  # noqa: E402
 from aga_lib.dates import excel_serial_til_dato, til_dato  # noqa: E402
-from aga_lib.lines import arbeidstimer_for_rad, bygg_vakt_id, klassifiser_linjer  # noqa: E402
+from aga_lib.lines import (  # noqa: E402
+    arbeidstimer_for_rad,
+    bygg_vakt_id,
+    klassifiser_linjer,
+    korriger_arbeidstimer_for_manglende_arbeidstidsrad,
+)
 from aga_lib.municipality import KommuneOppslag  # noqa: E402
 from aga_lib.aga_rules import Sonekatalog, SoneRad  # noqa: E402
 from aga_lib.projects import bygg_prosjektregister  # noqa: E402
@@ -39,7 +44,8 @@ KLASSIFISERINGSREGLER = {
     "arbeidstid_artikler": ["Arbeidstimer"],
     "korreksjon_artikler": ["Fratrekk vakt"],
     "korreksjon_artikkeltyper": ["Fratrekk"],
-    "kjente_tillegg_artikler": ["Nattillegg", "Kveldstillegg"],
+    "kjente_tillegg_artikler": ["Nattillegg", "Kveldstillegg", "Helg", "Helligdag 133,33%"],
+    "fallback_arbeidstid_artikler": ["Helligdag 133,33%", "Helg"],
 }
 
 
@@ -97,6 +103,38 @@ class TestLinjeklassifisering(unittest.TestCase):
         self.assertEqual(korreksjonsrad.iloc[0]["total_lonn"], -300.0)
         # Summen av lønn skal fortsatt inkludere det negative beløpet
         self.assertAlmostEqual(df["total_lonn"].sum(), 1000.0 + 200.0 - 300.0)
+
+    def test_helligdagsvakt_uten_arbeidstimer_rad_gir_ikke_null_timer(self):
+        # Helg og Helligdag 133,33% dekker SAMME vakt (ingen egen Arbeidstimer-rad) -
+        # skal telles én gang (største verdi), ikke summeres til dobbel arbeidstid.
+        df = pd.DataFrame([
+            {"ansattnr": "1", "arbeidsdato": "2026-01-01", "jobbnr": "J1", "prosjektnr": "P1",
+             "artikkel": "Helligdag 133,33%", "artikkeltype": "Ordinære timer",
+             "timer": 7.5, "timer_ekskl_pause": 7.5, "timer_inkl_pause": 7.5, "total_lonn": 5000.0},
+            {"ansattnr": "1", "arbeidsdato": "2026-01-01", "jobbnr": "J1", "prosjektnr": "P1",
+             "artikkel": "Helg", "artikkeltype": "Tidsbasert tillegg",
+             "timer": None, "timer_ekskl_pause": 7.5, "timer_inkl_pause": 7.5, "total_lonn": 2000.0},
+        ])
+        df = klassifiser_linjer(df, KLASSIFISERINGSREGLER)
+        df["arbeidstimer"] = df.apply(arbeidstimer_for_rad, axis=1)
+        df = korriger_arbeidstimer_for_manglende_arbeidstidsrad(df, KLASSIFISERINGSREGLER)
+        self.assertEqual(df["arbeidstimer"].sum(), 7.5, "Skal telle vaktens 7,5 timer én gang, ikke 0 eller 15")
+        self.assertEqual(df["arbeidstid_fallback_brukt"].sum(), 1)
+
+    def test_normal_vakt_med_arbeidstimer_rad_paavirkes_ikke_av_fallback(self):
+        df = pd.DataFrame([
+            {"ansattnr": "1", "arbeidsdato": "2026-01-02", "jobbnr": "J2", "prosjektnr": "P1",
+             "artikkel": "Arbeidstimer", "artikkeltype": "Ordinære timer",
+             "timer": 7.5, "timer_ekskl_pause": 7.5, "timer_inkl_pause": 7.5, "total_lonn": 5000.0},
+            {"ansattnr": "1", "arbeidsdato": "2026-01-02", "jobbnr": "J2", "prosjektnr": "P1",
+             "artikkel": "Helg", "artikkeltype": "Tidsbasert tillegg",
+             "timer": None, "timer_ekskl_pause": 3.0, "timer_inkl_pause": 3.0, "total_lonn": 900.0},
+        ])
+        df = klassifiser_linjer(df, KLASSIFISERINGSREGLER)
+        df["arbeidstimer"] = df.apply(arbeidstimer_for_rad, axis=1)
+        df = korriger_arbeidstimer_for_manglende_arbeidstidsrad(df, KLASSIFISERINGSREGLER)
+        self.assertEqual(df["arbeidstimer"].sum(), 7.5)
+        self.assertEqual(df["arbeidstid_fallback_brukt"].sum(), 0)
 
     def test_vakt_id_er_lik_for_samme_vakt(self):
         df = self._lag_df()
@@ -183,6 +221,9 @@ class TestRapportstruktur(unittest.TestCase):
         kildefil_sti = next((f for f in xlsx_filer if "ført arbeid" in f.name.lower()), xlsx_filer[0])
         hash_foer = hashlib.sha256(kildefil_sti.read_bytes()).hexdigest()
 
+        output_mappe = PROSJEKTMAPPE / "output"
+        filer_foer = set(output_mappe.glob("*")) if output_mappe.exists() else set()
+
         output_sti = aga_analyse.kjoer_analyse(PROSJEKTMAPPE)
 
         hash_etter = hashlib.sha256(kildefil_sti.read_bytes()).hexdigest()
@@ -193,7 +234,12 @@ class TestRapportstruktur(unittest.TestCase):
         wb = openpyxl.load_workbook(output_sti)
         for arknavn in OBLIGATORISKE_ARK:
             self.assertIn(arknavn, wb.sheetnames, f"Mangler obligatorisk ark: {arknavn}")
-        output_sti.unlink()
+
+        # Ryddighet: fjern ALLE filer denne testkjøringen selv opprettet i .\output,
+        # inkludert STEG4-9-leveransene (Prosjektregister.xlsx m.fl.), men aldri
+        # filer som lå der fra før testen startet.
+        for f in set(output_mappe.glob("*")) - filer_foer:
+            f.unlink()
 
 
 if __name__ == "__main__":

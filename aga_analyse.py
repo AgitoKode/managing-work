@@ -26,7 +26,13 @@ from aga_lib.config import last_konfigurasjon
 from aga_lib.dates import termin_for_maaned, til_dato
 from aga_lib.excel_io import les_arbeidsbok
 from aga_lib.file_discovery import KildefilIkkeFunnet, finn_kildefil
-from aga_lib.lines import arbeidstimer_for_rad, bygg_vakt_id, klassifiser_linjer
+from aga_lib.leveranser_steg4_9 import bygg_og_skriv_leveranser
+from aga_lib.lines import (
+    arbeidstimer_for_rad,
+    bygg_vakt_id,
+    klassifiser_linjer,
+    korriger_arbeidstimer_for_manglende_arbeidstidsrad,
+)
 from aga_lib.logging_setup import sett_opp_logging
 from aga_lib.metadata import Kjoremetadata, hent_pakkeversjoner, python_versjon_streng
 from aga_lib.municipality import KommuneOppslag
@@ -131,6 +137,14 @@ def kjoer_analyse(prosjektmappe: Path) -> Path:
     # --- Linjeklassifisering og vakt-ID ---
     df = klassifiser_linjer(df, konfig.linjeklassifisering)
     df["arbeidstimer"] = df.apply(arbeidstimer_for_rad, axis=1)
+    df = korriger_arbeidstimer_for_manglende_arbeidstidsrad(df, konfig.linjeklassifisering)
+    antall_fallback_vakter = int(df["arbeidstid_fallback_brukt"].sum())
+    if antall_fallback_vakter:
+        logger.info(
+            "%s vakter manglet en egen 'Arbeidstimer'-rad - arbeidstid hentet fra Helg/Helligdag-artikkel "
+            "i stedet (se config.json sin fallback_arbeidstid_artikler og Datakvalitet-arket).",
+            antall_fallback_vakter,
+        )
     df["vakt_id"] = df.apply(bygg_vakt_id, axis=1)
 
     for felt in ("total_lonn", "sosial_kost", "total_lonn_inkl_sosial_kost", "loenn_paa_loennsgrunnlag"):
@@ -392,6 +406,26 @@ def kjoer_analyse(prosjektmappe: Path) -> Path:
     )
     report.lagre(wb, output_sti)
     logger.info("Rapport lagret: %s", output_sti)
+
+    # --- STEG 4-9: seks frittstående leveransefiler i tillegg til hovedrapporten ---
+    kk_kilderad = next(r for r in kilderader if r.kilde_id == "KK-2026")
+    leveranser = bygg_og_skriv_leveranser(
+        output_mappe=konfig.sti("output_mappe"),
+        df=df,
+        prosjektregister=prosjektregister,
+        aga_per_prosjektnoekkel=aga_per_prosjektnoekkel,
+        kilde_id_geografi=kilde_id_geografi,
+        kilde_tilgjengelig=kilde_tilgjengelig,
+        kk_url=kk_kilderad.kildeadresse,
+        kk_tittel=kk_kilderad.kildetittel,
+        kk_utgiver=kk_kilderad.offentlig_utgiver,
+        kontrolltidspunkt=kontrolltidspunkt,
+        analyseaar=analyseaar,
+        logger=logger,
+    )
+    for f in leveranser:
+        logger.info("STEG 4-9-leveranse skrevet: %s", f)
+
     return output_sti
 
 
@@ -471,7 +505,7 @@ def _skriv_rapport(
         "arbeidsdato", "aar", "maaned", "termin", "ansattnr", "ansatt", "bedrift", "prosjektnr",
         "prosjekt", "jobbnr", "jobb", "postnummer_normalisert", "kommune", "kommunenummer", "sone",
         "ordinaer_sats", "aga_kontrollstatus", "aga_kontrollkommentar", "artikkeltype", "artikkel",
-        "lonnskomponent", "er_tilleggslinje", "er_korreksjon", "arbeidstimer", "lonn_uten_sosial_kost",
+        "lonnskomponent", "er_tilleggslinje", "er_korreksjon", "arbeidstid_fallback_brukt", "arbeidstimer", "lonn_uten_sosial_kost",
         "sosial_kost", "lonn_inkl_sosial_kost", "foreloepig_aga_belop", "aga_kilde_id", "vakt_id",
     ]
     detalj_df = df[[c for c in detalj_kolonner if c in df.columns]].rename(columns={
@@ -482,7 +516,9 @@ def _skriv_rapport(
         "sone": "AGA-sone", "ordinaer_sats": "AGA-sats (ordinær)", "aga_kontrollstatus": "AGA kontrollstatus",
         "aga_kontrollkommentar": "AGA kontrollkommentar", "artikkeltype": "Artikkeltype",
         "artikkel": "Artikkel", "lonnskomponent": "Lønnskomponent", "er_tilleggslinje": "Er_tilleggslinje",
-        "er_korreksjon": "Er_korreksjon", "arbeidstimer": "Arbeidstimer",
+        "er_korreksjon": "Er_korreksjon",
+        "arbeidstid_fallback_brukt": "Arbeidstid hentet fra Helg/Helligdag (ikke egen Arbeidstimer-rad)",
+        "arbeidstimer": "Arbeidstimer",
         "lonn_uten_sosial_kost": "Lønn_uten_sosial_kost", "sosial_kost": "Sosial_kost",
         "lonn_inkl_sosial_kost": "Lønn_inkl_sosial_kost",
         "foreloepig_aga_belop": "Foreløpig AGA-beløp (MÅ KONTROLLERES AV LØNN)",

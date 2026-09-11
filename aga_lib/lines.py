@@ -78,6 +78,55 @@ def arbeidstimer_for_rad(rad) -> float:
     return 0.0
 
 
+def _hjelpetimer_for_rad(rad) -> float | None:
+    for felt in ("timer_ekskl_pause", "timer", "timer_inkl_pause"):
+        verdi = rad.get(felt)
+        if verdi is not None and verdi == verdi:  # ikke NaN
+            try:
+                return float(verdi)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def korriger_arbeidstimer_for_manglende_arbeidstidsrad(
+    df: pd.DataFrame, klassifiseringsregler: dict,
+    gruppefelter: tuple[str, ...] = ("ansattnr", "arbeidsdato", "jobbnr", "prosjektnr"),
+) -> pd.DataFrame:
+    """Retter opp vakter som mangler en egen 'Arbeidstimer'-rad (typisk helg-/
+    helligdagsvakter der RecMan i stedet legger timene på artikkelen "Helg"
+    eller "Helligdag 133,33%"). Uten dette ville arbeidstimer_for_rad gi 0.0
+    for disse vaktene, siden ingen rad er klassifisert som "arbeidstid".
+
+    For hver gruppe (ansattnr+arbeidsdato+jobbnr+prosjektnr) UTEN noen rad i
+    "arbeidstid"-klassen: dersom én eller flere rader har artikkel fra
+    fallback_arbeidstid_artikler MED en reell timeverdi, brukes den STØRSTE
+    enkeltverdien som gruppens arbeidstimer (radene kan representere samme
+    vakt registrert på to parallelle lønnsartikler - de summeres derfor ikke).
+    Kun én rad per gruppe får den korrigerte verdien; øvrige forblir 0.0. Alle
+    berørte rader flagges i den nye kolonnen "arbeidstid_fallback_brukt"."""
+    df = df.copy()
+    df["arbeidstid_fallback_brukt"] = False
+    fallback_artikler = klassifiseringsregler.get("fallback_arbeidstid_artikler", [])
+    if not fallback_artikler:
+        return df
+
+    for _, gruppe_idx in df.groupby(list(gruppefelter), dropna=False).groups.items():
+        gruppe = df.loc[gruppe_idx]
+        if (gruppe["lonnskomponent"] == "arbeidstid").any():
+            continue
+        kandidater = gruppe[gruppe["artikkel"].isin(fallback_artikler)]
+        if kandidater.empty:
+            continue
+        timer_per_rad = kandidater.apply(_hjelpetimer_for_rad, axis=1)
+        if timer_per_rad.isna().all():
+            continue
+        beste_index = timer_per_rad.idxmax()
+        df.loc[beste_index, "arbeidstimer"] = float(timer_per_rad.loc[beste_index])
+        df.loc[beste_index, "arbeidstid_fallback_brukt"] = True
+    return df
+
+
 def bygg_vakt_id(rad) -> str:
     """Teknisk, konstruert vakt-ID - IKKE en original RecMan-ID. Brukes kun til
     å telle unike vakter og oppdage duplikater, aldri som fasit-nøkkel mot

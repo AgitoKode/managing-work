@@ -149,6 +149,33 @@ bekrefte at listene fortsatt er komplette neste lønnsperiode.
 Artikkel "Arbeidstimer") – tilleggslinjer for samme vakt (nattillegg,
 kveldstillegg, helg, overtid osv.) legges ikke oppå.
 
+**Viktig unntak oppdaget i faktiske data:** På enkelte helge-/helligdagsvakter
+mangler RecMan en egen "Arbeidstimer"-rad helt - hele vaktens timer ligger i
+stedet på artikkelen "Helg" og/eller "Helligdag 133,33%" (bekreftet: disse
+radene har reelle verdier i `Timer`/`Timer ekskl. pause` når ingen
+"Arbeidstimer"-rad finnes for samme ansattnr/arbeidsdato/jobbnr/prosjektnr).
+Uten en korreksjon ville disse vaktenes arbeidstid feilaktig blitt talt som 0.
+`aga_lib.lines.korriger_arbeidstimer_for_manglende_arbeidstidsrad` retter dette:
+for hver vakt UTEN egen arbeidstidsrad brukes den STØRSTE enkeltverdien blant
+kandidatene i `config.json` sin `fallback_arbeidstid_artikler` (ikke summen -
+"Helg" og "Helligdag 133,33%" kan representere DEN SAMME vakten registrert på
+to parallelle lønnsartikler). Berørte rader flagges i den nye kolonnen
+`arbeidstid_fallback_brukt` og telles i Datakvalitet-arket - i denne kjøringen
+gjaldt det 83 vakter.
+
+## 9b. STEG 4-9 - seks frittstående leveransefiler
+
+I tillegg til `AGA_Rapport_2026.xlsx` skriver programmet seks separate filer
+(samme underliggende beregning, forenklet kolonneoppsett per oppdragets
+STEG 4-9): `Prosjektregister.xlsx`, `AGA-detaljrapport.xlsx`,
+`AGA-oppsummering.xlsx`, `Kilderegister.xlsx`, `Avviksrapport.xlsx` og
+`Lederoppsummering.md`. Se `aga_lib/leveranser_steg4_9.py`. Disse gjenbruker
+samme prosjektregister/AGA-klassifisering som hovedrapporten - ingen ny
+innlesing eller nye nettverksoppslag gjøres. Dersom offisiell AGA-kilde
+mangler helt (jf. det kritiske kravet i STEG 4/9), skrives `Kilderegister.xlsx`
+TOMT (kun kolonneoverskrifter) og AGA-sone/-status settes til
+"MANGLER OFFISIELT KILDEGRUNNLAG" i de andre filene, uten å gjette.
+
 ## 10. Konstruert vakt-ID
 
 `aga_lib/lines.bygg_vakt_id` lager en teknisk ID fra

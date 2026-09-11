@@ -39,7 +39,9 @@
     "kjente_tillegg_artikler": [
       "Nattillegg", "Kveldstillegg", "Helg", "Overtid 100%", "Overtid 50%",
       "Aftentillegg", "Forskjøvet vakt", "Helligdag", "Helligdag 133,33%", "Reisekostnader"
-    ]
+    ],
+    "fallback_arbeidstid_artikler": ["Helligdag 133,33%", "Helligdag", "Helg"],
+    "_fallback_kommentar": "På helg-/helligdagsvakter registrerer RecMan noen ganger IKKE en egen 'Arbeidstimer'-rad - hele vaktens timer ligger da på en av artiklene over i stedet (bekreftet ved manuell gjennomgang: Timer/Timer ekskl. pause har reelle verdier på disse radene når Arbeidstimer mangler for samme ansatt/dato/jobbnr/prosjektnr). Uten denne regelen ville disse vaktenes arbeidstid feilaktig blitt talt som 0."
   },
   "stier": {
     "input_mappe": "input",

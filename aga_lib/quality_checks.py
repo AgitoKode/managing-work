@@ -205,6 +205,10 @@ def kjoer_kontroller(
         {"Kontroll": "Unike vakt-ID-er", "Verdi": int(df["vakt_id"].nunique())},
         {"Kontroll": "Unike ansatte", "Verdi": int(df["ansattnr"].nunique())},
         {"Kontroll": "Unike prosjekter i prosjektregisteret", "Verdi": len(prosjektregister)},
+        {
+            "Kontroll": "Vakter uten egen Arbeidstimer-rad (arbeidstid hentet fra Helg/Helligdag)",
+            "Verdi": int(df.get("arbeidstid_fallback_brukt", pd.Series(dtype=bool)).sum()),
+        },
     ]
 
     return avvik, datakvalitet
