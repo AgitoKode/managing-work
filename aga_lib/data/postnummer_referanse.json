@@ -11,6 +11,7 @@
     "3530": {"kommunenummer": "3310", "kommune": "Hole", "poststed": "Røyse", "kilde": "Bring/Posten postnummerregister"},
     "5550": {"kommunenummer": "4612", "kommune": "Sveio", "poststed": "Sveio", "kilde": "Bring/Posten postnummerregister"},
     "6800": {"kommunenummer": "4647", "kommune": "Sunnfjord", "poststed": "Førde", "kilde": "Bring/Posten postnummerregister", "delkommune_merknad": "Gamle Førde"},
-    "3041": {"kommunenummer": "3301", "kommune": "Drammen", "poststed": "Drammen", "kilde": "Bring/Posten postnummerregister"}
+    "3041": {"kommunenummer": "3301", "kommune": "Drammen", "poststed": "Drammen", "kilde": "Bring/Posten postnummerregister"},
+    "9008": {"kommunenummer": "5501", "kommune": "Tromsø", "poststed": "Tromsø", "kilde": "Bring/Posten postnummerregister", "delkommune_merknad": ""}
   }
 }
